@@ -66,16 +66,20 @@
       </table>
     </emu-table>
 
-    <emu-clause id="sec-initializedatetimeformat" aoid="InitializeDateTimeFormat">
-      <h1>InitializeDateTimeFormat ( _dateTimeFormat_, _locales_, _options_ )</h1>
+    <emu-clause id="sec-createdatetimeformat" aoid="CreateDateTimeFormat">
+      <h1>CreateDateTimeFormat ( _newTarget_, _locales_, _options_, _required_, _defaults_ )</h1>
 
       <p>
-        The abstract operation InitializeDateTimeFormat accepts the arguments _dateTimeFormat_ (which must be an object), _locales_, and _options_. It initializes _dateTimeFormat_ as a DateTimeFormat object. This abstract operation functions as follows:
+        The abstract operation CreateDateTimeFormat accepts the arguments _newTarget_, _locales_, _options_, _required_, and _defaults_. It returns a new DateTimeFormat object. This abstract operation functions as follows:
       </p>
 
       <emu-alg>
+        1. Let _dateTimeFormat_ be ? OrdinaryCreateFromConstructor(_newTarget_, `"%DateTimeFormatPrototype%"`, &laquo; [[InitializedDateTimeFormat]], [[Locale]], [[Calendar]], [[NumberingSystem]], [[TimeZone]], [[Weekday]], [[Era]], [[Year]], [[Month]], [[Day]], [[Hour]], [[Minute]], [[Second]], [[TimeZoneName]], [[HourCycle]], [[Pattern]], [[BoundFormat]] &raquo;).
         1. Let _requestedLocales_ be ? CanonicalizeLocaleList(_locales_).
-        1. Let _options_ be ? ToDateTimeOptions(_options_, `"any"`, `"date"`).
+        1. If _options_ is *undefined*, then
+          1. Let _options_ be ObjectCreate(*null*).
+        1. Else,
+          1. Let _options_ be ? ToObject(_options_).
         1. Let _opt_ be a new Record.
         1. Let _matcher_ be ? GetOption(_options_, `"localeMatcher"`, `"string"`, &laquo; `"lookup"`, `"best fit"` &raquo;, `"best fit"`).
         1. Set _opt_.[[localeMatcher]] to _matcher_.
@@ -105,6 +109,25 @@
           1. Let _prop_ be the name given in the Property column of the row.
           1. Let _value_ be ? GetOption(_options_, _prop_, `"string"`, &laquo; the strings given in the Values column of the row &raquo;, *undefined*).
           1. Set _opt_.[[&lt;_prop_&gt;]] to _value_.
+        1. Let _needDefaults_ be *true*.
+        1. If _required_ is `"date"` or `"any"`, then
+          1. For each of the property names `"weekday"`, `"year"`, `"month"`, `"day"`, do
+            1. Let _prop_ be the property name.
+            1. Let _value_ be _opt_.[[&lt;_prop_&gt;]].
+            1. If _value_ is not *undefined*, let _needDefaults_ be *false*.
+        1. If _required_ is `"time"` or `"any"`, then
+          1. For each of the property names `"hour"`, `"minute"`, `"second"`, do
+            1. Let _prop_ be the property name.
+            1. Let _value_ be _opt_.[[&lt;_prop_&gt;]].
+            1. If _value_ is not *undefined*, let _needDefaults_ be *false*.
+        1. If _needDefaults_ is *true* and _defaults_ is either `"date"` or `"all"`, then
+          1. For each of the property names `"year"`, `"month"`, `"day"`, do
+            1. Let _prop_ be the property name.
+            1. Set _opt_.[[&lt;_prop_&gt;]] to `"numeric"`.
+        1. If _needDefaults_ is *true* and _defaults_ is either `"time"` or `"all"`, then
+          1. For each of the property names `"hour"`, `"minute"`, `"second"`, do
+            1. Let _prop_ be the property name.
+            1. Set _opt_.[[&lt;_prop_&gt;]] to `"numeric"`.
         1. Let _dataLocaleData_ be _localeData_.[[&lt;_dataLocale_&gt;]].
         1. Let _formats_ be _dataLocaleData_.[[formats]].
         1. Let _matcher_ be ? GetOption(_options_, `"formatMatcher"`, `"string"`, &laquo; `"basic"`, `"best fit"` &raquo;, `"best fit"`).
@@ -144,37 +167,6 @@
           1. Let _pattern_ be _bestFormat_.[[pattern]].
         1. Set _dateTimeFormat_.[[Pattern]] to _pattern_.
         1. Return _dateTimeFormat_.
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-todatetimeoptions" aoid="ToDateTimeOptions">
-      <h1>ToDateTimeOptions ( _options_, _required_, _defaults_ )</h1>
-
-      <p>
-        When the ToDateTimeOptions abstract operation is called with arguments _options_, _required_, and _defaults_, the following steps are taken:
-      </p>
-
-      <emu-alg>
-        1. If _options_ is *undefined*, let _options_ be *null*; otherwise let _options_ be ? ToObject(_options_).
-        1. Let _options_ be ObjectCreate(_options_).
-        1. Let _needDefaults_ be *true*.
-        1. If _required_ is `"date"` or `"any"`, then
-          1. For each of the property names `"weekday"`, `"year"`, `"month"`, `"day"`, do
-            1. Let _prop_ be the property name.
-            1. Let _value_ be ? Get(_options_, _prop_).
-            1. If _value_ is not *undefined*, let _needDefaults_ be *false*.
-        1. If _required_ is `"time"` or `"any"`, then
-          1. For each of the property names `"hour"`, `"minute"`, `"second"`, do
-            1. Let _prop_ be the property name.
-            1. Let _value_ be ? Get(_options_, _prop_).
-            1. If _value_ is not *undefined*, let _needDefaults_ be *false*.
-        1. If _needDefaults_ is *true* and _defaults_ is either `"date"` or `"all"`, then
-          1. For each of the property names `"year"`, `"month"`, `"day"`, do
-            1. Perform ? CreateDataPropertyOrThrow(_options_, _prop_, `"numeric"`).
-        1. If _needDefaults_ is *true* and _defaults_ is either `"time"` or `"all"`, then
-          1. For each of the property names `"hour"`, `"minute"`, `"second"`, do
-            1. Perform ? CreateDataPropertyOrThrow(_options_, _prop_, `"numeric"`).
-        1. Return _options_.
       </emu-alg>
     </emu-clause>
 
@@ -420,19 +412,18 @@
 
       <emu-alg>
         1. If NewTarget is *undefined*, let _newTarget_ be the active function object, else let _newTarget_ be NewTarget.
-        1. Let _dateTimeFormat_ be ? OrdinaryCreateFromConstructor(_newTarget_, `"%DateTimeFormatPrototype%"`, &laquo; [[InitializedDateTimeFormat]], [[Locale]], [[Calendar]], [[NumberingSystem]], [[TimeZone]], [[Weekday]], [[Era]], [[Year]], [[Month]], [[Day]], [[Hour]], [[Minute]], [[Second]], [[TimeZoneName]], [[HourCycle]], [[Pattern]], [[BoundFormat]] &raquo;).
-        1. Perform ? InitializeDateTimeFormat(_dateTimeFormat_, _locales_, _options_).
+        1. Let _dateTimeFormat_ be ? CreateDateTimeFormat(_newTarget_, _locales_, _options_, `"any"`, `"date"`).
       </emu-alg>
       <emu-normative-optional>
       <emu-alg>
-        4. Let _this_ be the *this* value.
+        3. Let _this_ be the *this* value.
         1. If NewTarget is *undefined* and ? InstanceofOperator(_this_, %DateTimeFormat%) is *true*, then
           1. Perform ? DefinePropertyOrThrow(_this_, %Intl%.[[FallbackSymbol]], PropertyDescriptor{ [[Value]]: _dateTimeFormat_, [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
           1. Return _this_.
       </emu-alg>
       </emu-normative-optional>
       <emu-alg>
-        6. Return _dateTimeFormat_.
+        5. Return _dateTimeFormat_.
       </emu-alg>
       <emu-note>See <emu-xref href="#legacy-constructor"></emu-xref> for the motivation of the normative optional text.</emu-note>
     </emu-clause>
